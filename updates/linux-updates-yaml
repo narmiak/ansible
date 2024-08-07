@@ -1,4 +1,4 @@
-- hosts: linux-all
+- hosts: all
   become: true
   tasks:
   - name: update apt packages
