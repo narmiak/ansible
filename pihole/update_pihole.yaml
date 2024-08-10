@@ -4,6 +4,6 @@
   tasks:
     - name: Update pihole using pihole -up command
       shell: pihole -up
-      register: phole
+      register: ps
 
     - debug: msg={{ ps.stdout }}
