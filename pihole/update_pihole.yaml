@@ -1,0 +1,6 @@
+---
+- name: Update pihole
+  hosts: pihole
+  tasks:
+  	- name: Start pihole -up command
+      shell: pihole -up
