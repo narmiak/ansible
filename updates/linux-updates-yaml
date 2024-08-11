@@ -2,15 +2,14 @@
 - name: Update Linux host
   hosts: all
   become: true
+  ignore_unreachable: true
   tasks:
     - name: Get all updates
-      ignore_unreachable: true
       ansible.builtin.apt:
         update_cache: true
         autoremove: true
         autoclean: true
     - name: Upgrade all packages on servers
-      ignore_unreachable: true
       ansible.builtin.apt:
         name: "*"
         state: latest
