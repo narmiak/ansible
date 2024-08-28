@@ -3,13 +3,22 @@
   hosts: all
   become: true
   ignore_unreachable: true
+  strategy: free
   tasks:
-    - name: Get all updates
-      ansible.builtin.apt:
-        update_cache: true
-        autoremove: true
-        autoclean: true
-    - name: Upgrade all packages on servers
-      ansible.builtin.apt:
-        name: "*"
-        state: latest
+    - name: install all updates
+      apt:
+        upgrade: dist
+        update_cache: yes
+        autoremove: yes
+        autoclean: yes
+      register: result
+    - name: List installed and updated packages
+      shell: grep -E "^$(date +%Y-%m-%d).+ (install|upgrade) " /var/log/dpkg.log |cut -d " " -f 3-5
+      register: result
+    - name: Show Output
+      debug: msg="{{ result.stdout_lines }}"
+
+
+    - name: Check if a reboot is needed on all servers
+      register: reboot_required_file
+      stat: path=/var/run/reboot-required get_md5=no
