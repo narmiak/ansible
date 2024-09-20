@@ -20,4 +20,4 @@
       register: result
     - name: Show Output
       debug: msg="{{ result.stdout_lines }}"
-      when: result is defined
+      when: result.stat.exists
