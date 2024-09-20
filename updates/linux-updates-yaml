@@ -1,8 +1,11 @@
 ---
 - name: Update Linux host
   hosts: all
+  order: sorted
   become: true
   ignore_unreachable: true
+  pre_tasks:
+   - ping:
   #strategy: free
   tasks:
     - name: install all updates
