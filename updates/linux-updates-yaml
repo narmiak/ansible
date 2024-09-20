@@ -4,20 +4,21 @@
   order: sorted
   become: true
   ignore_unreachable: true
-  pre_tasks:
-   - ping:
   #strategy: free
   tasks:
+    - ping:
+      register: ping_result
+      ignore_unreachable: true
     - name: install all updates
       apt:
         upgrade: dist
         update_cache: yes
         autoremove: yes
         autoclean: yes
-      #register: result
+      register: result
     - name: List installed and updated packages
       shell: grep -E "^$(date +%Y-%m-%d).+ (install|upgrade) " /var/log/dpkg.log |cut -d " " -f 3-5
       register: result
     - name: Show Output
       debug: msg="{{ result.stdout_lines }}"
-      when: result.stat.exists
+      when: ping_result.unreachable is defined
