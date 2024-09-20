@@ -21,4 +21,4 @@
       register: result
     - name: Show Output
       debug: msg="{{ result.stdout_lines }}"
-      when: ping_result.unreachable is defined
+      when: ping_result.unreachable is undefined
