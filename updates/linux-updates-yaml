@@ -5,6 +5,8 @@
   become: true
   ignore_unreachable: true
   #strategy: free
+  vars:
+    ansible_command_timeout: 3600
   tasks:
     - ping:
       register: ping_result
