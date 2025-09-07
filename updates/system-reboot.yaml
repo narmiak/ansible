@@ -1,0 +1,10 @@
+---
+- name: Reboot Linux host after 1 minute
+  hosts: all
+  order: sorted
+  become: true
+  ignore_unreachable: true
+  #strategy: free
+  ansible.builtin.reboot:
+    pre_reboot_delay: 1
+    msg: "System will be rebooted by Ansible in 1 minute."
