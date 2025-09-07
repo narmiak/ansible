@@ -3,7 +3,8 @@
   order: sorted
   become: true
   ignore_unreachable: true
-  #strategy: free
-  ansible.builtin.reboot:
-    pre_reboot_delay: 1
-    msg: "System will be rebooted by Ansible in 1 minute."
+  tasks:
+    - name: Reboot the system
+      ansible.builtin.reboot:
+        pre_reboot_delay: 60
+        msg: "System will be rebooted by Ansible in 1 minute."
