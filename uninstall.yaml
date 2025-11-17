@@ -1,0 +1,76 @@
+---
+- name: Backup config files and uninstall TLM Collateral Management Reporting
+  hosts: windows
+  gather_facts: no
+
+  vars:
+    backup_root: "C:\\Backup\\TLMReportingConfigs"
+
+  tasks:
+
+    - name: Find installed TLM Reporting product registry entries
+      win_shell: |
+        $keys = Get-ItemProperty `
+          "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*" , `
+          "HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*" |
+        Where-Object {
+          $_.DisplayName -match '^TLM Collateral Management \d+\.\d+\.\d+ Reporting$'
+        }
+
+        if ($keys) {
+          $keys | ConvertTo-Json -Depth 5
+        }
+      register: tlm_reporting_raw
+
+    - name: Parse registry data
+      set_fact:
+        tlm_reporting_entries: "{{ tlm_reporting_raw.stdout | from_json }}"
+      when: tlm_reporting_raw.stdout != ""
+
+    - name: Ensure tlm_reporting_entries is a list
+      set_fact:
+        tlm_reporting_entries: [ "{{ tlm_reporting_entries }}" ]
+      when: tlm_reporting_entries is mapping
+
+    - name: Build list of install paths (may be multiple versions)
+      set_fact:
+        install_paths: "{{ tlm_reporting_entries | map(attribute='InstallLocation') | list }}"
+
+    - name: Create timestamped backup folder
+      win_shell: |
+        $path = "{{ backup_root }}\\{{ ansible_date_time.date }}_{{ ansible_date_time.time }}"
+        New-Item -ItemType Directory -Force -Path $path | Out-Null
+        Write-Output $path
+      register: backup_folder
+
+    - name: Backup all .config files recursively from install folders
+      win_shell: |
+        $target = "{{ backup_folder.stdout }}"
+        Get-ChildItem -Path "{{ item }}" -Filter *.config -Recurse -ErrorAction SilentlyContinue |
+        ForEach-Object {
+            $dest = Join-Path $target $_.FullName.Substring(3)  # keep folder structure
+            New-Item -ItemType Directory -Force -Path (Split-Path $dest) | Out-Null
+            Copy-Item -Path $_.FullName -Destination $dest -Force
+        }
+      loop: "{{ install_paths }}"
+      when: item is not none and item != ""
+
+    - name: Extract MSI product GUID(s)
+      set_fact:
+        uninstall_guids: >-
+          {{ tlm_reporting_entries
+             | map(attribute='UninstallString')
+             | map('regex_replace','^.*?({.*}).*$','\1')
+             | list }}
+
+    - name: Uninstall matched TLM Reporting components
+      win_package:
+        product_id: "{{ item }}"
+        state: absent
+      loop: "{{ uninstall_guids }}"
+      when: uninstall_guids | length > 0
+
+    - name: Message if nothing found
+      debug:
+        msg: "No TLM Collateral Management Reporting installation found."
+      when: uninstall_guids | length == 0
