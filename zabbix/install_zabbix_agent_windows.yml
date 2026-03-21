@@ -60,6 +60,7 @@
           - "SERVER={{ zabbix_server }}"
           - "SERVERACTIVE={{ zabbix_server }}"
           - "HOSTNAME={{ ansible_fqdn }}"
+          - "HOSTMETADATA=Windows"
       when: >
         zabbix_installed.exists is not defined or
         zabbix_installed.value is not defined or
