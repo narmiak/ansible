@@ -4,6 +4,7 @@
   order: sorted
   become: true
   ignore_unreachable: true
+  ansible_python_interpreter: auto_silent
   vars:
     ansible_command_timeout: 3600
   tasks:
