@@ -1,0 +1,40 @@
+---
+- name: Install Zabbix Agent on Windows hosts
+  hosts: windows
+  vars:
+    zabbix_server: "192.168.1.214"
+    zabbix_agent_version: "7.4.0"
+    zabbix_agent_arch: "amd64"
+    zabbix_install_dir: "C:\\Program Files\\Zabbix Agent 2"
+
+  tasks:
+    - name: Download Zabbix Agent 2 installer
+      win_get_url:
+        url: "https://cdn.zabbix.com/zabbix/binaries/stable/7.4/{{ zabbix_agent_version }}/zabbix_agent2-{{ zabbix_agent_version }}-windows-{{ zabbix_agent_arch }}-openssl.msi"
+        dest: "C:\\Temp\\zabbix_agent2.msi"
+
+    - name: Install Zabbix Agent 2
+      win_package:
+        path: "C:\\Temp\\zabbix_agent2.msi"
+        state: present
+        arguments:
+          - /quiet
+          - "SERVER={{ zabbix_server }}"
+          - "SERVERACTIVE={{ zabbix_server }}"
+          - "HOSTNAME={{ ansible_fqdn }}"
+
+    - name: Ensure Zabbix Agent 2 service is started and enabled
+      win_service:
+        name: "Zabbix Agent 2"
+        state: started
+        start_mode: auto
+
+    - name: Open Zabbix agent port in Windows Firewall
+      win_firewall_rule:
+        name: "Zabbix Agent"
+        localport: 10050
+        action: allow
+        direction: in
+        protocol: tcp
+        state: present
+        enabled: yes
