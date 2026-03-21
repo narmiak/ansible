@@ -3,14 +3,19 @@
   hosts: windowsworkstations
   vars:
     zabbix_server: "192.168.1.214"
-    zabbix_agent_version: "7.4.0"
     zabbix_agent_arch: "amd64"
     zabbix_install_dir: "C:\\Program Files\\Zabbix Agent 2"
 
   tasks:
+    - name: Get latest Zabbix 7.4 agent version
+      win_uri:
+        url: "https://cdn.zabbix.com/zabbix/binaries/stable/7.4/"
+        return_content: yes
+      register: zabbix_versions
+
     - name: Download Zabbix Agent 2 installer
       win_get_url:
-        url: "https://cdn.zabbix.com/zabbix/binaries/stable/7.4/{{ zabbix_agent_version }}/zabbix_agent2-{{ zabbix_agent_version }}-windows-{{ zabbix_agent_arch }}-openssl.msi"
+        url: "https://cdn.zabbix.com/zabbix/binaries/stable/7.4/{{ zabbix_agent_version }}/zabbix_agent2-{{ zabbix_agent_version }}-windows-amd64-openssl.msi"
         dest: "C:\\Temp\\zabbix_agent2.msi"
 
     - name: Install Zabbix Agent 2
