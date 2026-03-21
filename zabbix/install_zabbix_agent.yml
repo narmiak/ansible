@@ -1,0 +1,65 @@
+---
+- name: Install and configure Zabbix Agent
+  hosts: all
+  order: sorted
+  become: true
+  ignore_unreachable: true
+  vars:
+    zabbix_server: "192.168.1.214"
+    zabbix_server_hostname: "srv14.kuchta.local"
+    zabbix_agent_version: "7.4"
+
+  tasks:
+    - ping:
+      register: ping_result
+      ignore_unreachable: true
+
+    - name: Download Zabbix repository package
+      get_url:
+        url: "https://repo.zabbix.com/zabbix/{{ zabbix_agent_version }}/release/{{ ansible_distribution | lower }}/pool/main/z/zabbix-release/zabbix-release_latest_{{ zabbix_agent_version }}+{{ ansible_distribution | lower }}{{ ansible_distribution_version }}_all.deb"
+        dest: /tmp/zabbix-release.deb
+      when: ping_result.unreachable is undefined
+
+    - name: Install Zabbix repository package
+      apt:
+        deb: /tmp/zabbix-release.deb
+      when: ping_result.unreachable is undefined
+
+    - name: Install Zabbix agent
+      apt:
+        name: zabbix-agent2
+        state: present
+        update_cache: yes
+      when: ping_result.unreachable is undefined
+
+    - name: Configure Zabbix agent
+      template:
+        src: zabbix_agent2.conf.j2
+        dest: /etc/zabbix/zabbix_agent2.conf
+        owner: root
+        group: root
+        mode: '0644'
+      notify: restart zabbix-agent2
+      when: ping_result.unreachable is undefined
+
+    - name: Ensure Zabbix agent is started and enabled
+      systemd:
+        name: zabbix-agent2
+        state: started
+        enabled: yes
+      when: ping_result.unreachable is undefined
+
+    - name: Allow Zabbix agent port through UFW (if active)
+      ufw:
+        rule: allow
+        port: '10050'
+        proto: tcp
+      when:
+        - ping_result.unreachable is undefined
+        - ansible_facts.packages['ufw'] is defined
+
+  handlers:
+    - name: restart zabbix-agent2
+      systemd:
+        name: zabbix-agent2
+        state: restarted
