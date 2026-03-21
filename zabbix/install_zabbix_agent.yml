@@ -1,6 +1,6 @@
 ---
 - name: Install and configure Zabbix Agent
-  hosts: linux-all
+  hosts: all
   order: sorted
   become: true
   ignore_unreachable: true
