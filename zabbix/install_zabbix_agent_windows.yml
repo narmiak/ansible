@@ -18,6 +18,8 @@
         return_content: yes
       register: zabbix_dir_listing
       delegate_to: localhost
+      vars:
+        ansible_connection: local
 
     - name: Extract latest version number
       set_fact:
