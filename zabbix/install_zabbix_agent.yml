@@ -1,6 +1,6 @@
 ---
 - name: Install and configure Zabbix Agent
-  hosts: all
+  hosts: linux
   order: sorted
   become: true
   ignore_unreachable: true
@@ -28,8 +28,15 @@
     - name: Install Zabbix agent
       apt:
         name: zabbix-agent2
-        state: present
+        state: latest
         update_cache: yes
+      when: ping_result.unreachable is undefined
+
+    - name: Stop Zabbix agent before reconfiguring
+      systemd:
+        name: zabbix-agent2
+        state: stopped
+      ignore_errors: yes
       when: ping_result.unreachable is undefined
 
     - name: Configure Zabbix agent
@@ -39,6 +46,7 @@
         owner: root
         group: root
         mode: '0644'
+        force: yes
       notify: restart zabbix-agent2
       when: ping_result.unreachable is undefined
 
