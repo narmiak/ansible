@@ -18,6 +18,23 @@
       failed_when: dpkg_fix.rc != 0
       when: ping_result.unreachable is undefined
 
+    - name: Fix broken dependencies if present
+      command: apt-get install --fix-broken -y
+      register: apt_fix
+      changed_when: "'0 upgraded, 0 newly installed, 0 to remove' not in apt_fix.stdout"
+      failed_when: apt_fix.rc != 0
+      when: ping_result.unreachable is undefined
+
+    - name: Kill any stale apt/dpkg lock holders
+      shell: |
+        for pid in $(lsof /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/cache/apt/archives/lock 2>/dev/null | awk 'NR>1 {print $2}' | sort -u); do
+          kill -9 "$pid" 2>/dev/null || true
+        done
+        rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock \
+              /var/lib/apt/lists/lock /var/cache/apt/archives/lock
+      changed_when: false
+      when: ping_result.unreachable is undefined
+
     - name: install all updates
       apt:
         upgrade: dist
