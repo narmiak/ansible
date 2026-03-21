@@ -1,14 +1,19 @@
 ---
-- name: Get latest Zabbix agent version
-  hosts: localhost
-  connection: local
-  gather_facts: no
+- name: Install Zabbix Agent on Windows hosts
+  hosts: windows
   vars:
+    zabbix_server: "192.168.1.214"
+    zabbix_agent_arch: "amd64"
     zabbix_base_url: "https://cdn.zabbix.com/zabbix/binaries/stable/7.4/"
 
   tasks:
+    - name: Create Temp directory if it doesn't exist
+      win_file:
+        path: "C:\\Temp"
+        state: directory
+
     - name: Fetch Zabbix 7.4 directory listing
-      uri:
+      win_uri:
         url: "{{ zabbix_base_url }}"
         return_content: yes
       register: zabbix_dir_listing
@@ -25,20 +30,6 @@
     - name: Show version that will be installed
       debug:
         msg: "Latest Zabbix agent version found: {{ zabbix_agent_version }}"
-
-- name: Install Zabbix Agent on Windows hosts
-  hosts: windows
-  vars:
-    zabbix_server: "192.168.1.214"
-    zabbix_agent_arch: "amd64"
-    zabbix_base_url: "https://cdn.zabbix.com/zabbix/binaries/stable/7.4/"
-    zabbix_agent_version: "{{ hostvars['localhost']['zabbix_agent_version'] }}"
-
-  tasks:
-    - name: Create Temp directory if it doesn't exist
-      win_file:
-        path: "C:\\Temp"
-        state: directory
 
     - name: Check if Zabbix Agent 2 is already installed
       win_reg_stat:
