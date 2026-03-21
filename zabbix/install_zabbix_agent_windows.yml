@@ -1,6 +1,6 @@
 ---
 - name: Install Zabbix Agent on Windows hosts
-  hosts: windows
+  hosts: windowsworkstations
   vars:
     zabbix_server: "192.168.1.214"
     zabbix_agent_version: "7.4.0"
