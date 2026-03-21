@@ -4,13 +4,20 @@
   order: sorted
   become: true
   ignore_unreachable: true
-  #strategy: free
   vars:
     ansible_command_timeout: 3600
   tasks:
     - ping:
       register: ping_result
       ignore_unreachable: true
+
+    - name: Fix interrupted dpkg state if present
+      command: dpkg --configure -a
+      register: dpkg_fix
+      changed_when: dpkg_fix.stdout | length > 0
+      failed_when: dpkg_fix.rc != 0
+      when: ping_result.unreachable is undefined
+
     - name: install all updates
       apt:
         upgrade: dist
@@ -18,9 +25,13 @@
         autoremove: yes
         autoclean: yes
       register: result
+      when: ping_result.unreachable is undefined
+
     - name: List installed and updated packages
-      shell: grep -E "^$(date +%Y-%m-%d).+ (install|upgrade) " /var/log/dpkg.log |cut -d " " -f 3-5
+      shell: grep -E "^$(date +%Y-%m-%d).+ (install|upgrade) " /var/log/dpkg.log | cut -d " " -f 3-5
       register: result
+      when: ping_result.unreachable is undefined
+
     - name: Show Output
       debug: msg="{{ result.stdout_lines }}"
       when: ping_result.unreachable is undefined
