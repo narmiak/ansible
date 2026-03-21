@@ -1,22 +1,57 @@
 ---
 - name: Install Zabbix Agent on Windows hosts
-  hosts: windowsworkstations
+  hosts: windows
   vars:
     zabbix_server: "192.168.1.214"
     zabbix_agent_arch: "amd64"
-    zabbix_install_dir: "C:\\Program Files\\Zabbix Agent 2"
+    zabbix_base_url: "https://cdn.zabbix.com/zabbix/binaries/stable/7.4/"
 
   tasks:
-    - name: Get latest Zabbix 7.4 agent version
-      win_uri:
-        url: "https://cdn.zabbix.com/zabbix/binaries/stable/7.4/"
+    - name: Create Temp directory if it doesn't exist
+      win_file:
+        path: "C:\\Temp"
+        state: directory
+
+    - name: Fetch Zabbix 7.4 directory listing
+      uri:
+        url: "{{ zabbix_base_url }}"
         return_content: yes
-      register: zabbix_versions
+      register: zabbix_dir_listing
+      delegate_to: localhost
+
+    - name: Extract latest version number
+      set_fact:
+        zabbix_agent_version: >-
+          {{ zabbix_dir_listing.content
+            | regex_findall('href="(7\.4\.\d+)/"')
+            | map('regex_replace', '^(.*)$', '\1')
+            | list
+            | sort(reverse=false)
+            | last }}
+
+    - name: Show version that will be installed
+      debug:
+        msg: "Latest Zabbix agent version found: {{ zabbix_agent_version }}"
+
+    - name: Check if Zabbix Agent 2 is already installed
+      win_reg_stat:
+        path: HKLM:\SOFTWARE\Zabbix SIA\Zabbix Agent 2
+        name: Version
+      register: zabbix_installed
+      ignore_errors: yes
+
+    - name: Show currently installed version
+      debug:
+        msg: "Currently installed version: {{ zabbix_installed.value | default('Not installed') }}"
 
     - name: Download Zabbix Agent 2 installer
       win_get_url:
-        url: "https://cdn.zabbix.com/zabbix/binaries/stable/7.4/{{ zabbix_agent_version }}/zabbix_agent2-{{ zabbix_agent_version }}-windows-amd64-openssl.msi"
+        url: "{{ zabbix_base_url }}{{ zabbix_agent_version }}/zabbix_agent2-{{ zabbix_agent_version }}-windows-{{ zabbix_agent_arch }}-openssl.msi"
         dest: "C:\\Temp\\zabbix_agent2.msi"
+      when: >
+        zabbix_installed.exists is not defined or
+        zabbix_installed.value is not defined or
+        zabbix_installed.value != zabbix_agent_version
 
     - name: Install Zabbix Agent 2
       win_package:
@@ -27,6 +62,11 @@
           - "SERVER={{ zabbix_server }}"
           - "SERVERACTIVE={{ zabbix_server }}"
           - "HOSTNAME={{ ansible_fqdn }}"
+      when: >
+        zabbix_installed.exists is not defined or
+        zabbix_installed.value is not defined or
+        zabbix_installed.value != zabbix_agent_version
+      notify: restart zabbix-agent2
 
     - name: Ensure Zabbix Agent 2 service is started and enabled
       win_service:
@@ -43,3 +83,15 @@
         protocol: tcp
         state: present
         enabled: yes
+
+    - name: Clean up installer
+      win_file:
+        path: "C:\\Temp\\zabbix_agent2.msi"
+        state: absent
+      ignore_errors: yes
+
+  handlers:
+    - name: restart zabbix-agent2
+      win_service:
+        name: "Zabbix Agent 2"
+        state: restarted
